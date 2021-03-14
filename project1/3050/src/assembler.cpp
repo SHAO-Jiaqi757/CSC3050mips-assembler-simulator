@@ -11,22 +11,12 @@
 
 using namespace std;
 
-bool isOverflow();
 
-int Simulator::is_valid_label(std::string label)
+
+int Assembler::is_valid_label(std::string label)
 {
     // a valid label begin with _ or a letter (a-z)
     return (label.front() == '_') || (isalpha(label.front()));
-}
-
-bool isOverflow()
-/*
-For instructions with trap (i.e. overflow trap), 
-print out the error message and terminate the
-program execution.
-*/
-{
-    return false;
 }
 
 int32_t pc_ = 0x400000;
@@ -57,7 +47,7 @@ int instruction_count = 0;
  
 */
 
-void Simulator::set_regMap()
+void Assembler::set_regMap()
 {
     regMap = { {"zero", 0},
                {"at", 1},
@@ -93,7 +83,7 @@ void Simulator::set_regMap()
                {"ra", 31}
     };
 }
-void Simulator::translate_R_type(int op, int rs, int rt, int rd, int shamt, int funct)
+void Assembler::translate_R_type(int op, int rs, int rt, int rd, int shamt, int funct)
 {
     int32_t ans = 0;
     ans = (op << 26);
@@ -108,7 +98,7 @@ void Simulator::translate_R_type(int op, int rs, int rt, int rd, int shamt, int 
     // instructions[instr_index++] = ans;
 }
 
-void Simulator::translate_I_type(int op, int rs, int rt, int addr)
+void Assembler::translate_I_type(int op, int rs, int rt, int addr)
 {
     int32_t ans = 0;
     ans = (op << 26);
@@ -120,7 +110,7 @@ void Simulator::translate_I_type(int op, int rs, int rt, int addr)
     // cout << res << endl;
 }
 
-void Simulator::translate_J_type(int op, int addr)
+void Assembler::translate_J_type(int op, int addr)
 {
     int32_t ans = 0;
     ans = (op << 26);
@@ -156,7 +146,7 @@ vector<string> split(const string &str, const string &delim)
 }
 
 // find all label addresses and extract instructions
-void Simulator::readFile(std::string filename)
+void Assembler::readFile(std::string filename)
 {
 
     ifstream infile(filename);
@@ -215,13 +205,18 @@ void Simulator::readFile(std::string filename)
     infile.close();
 }
 
-void Simulator::translateInstruc(vector<string> instruction)
+void Assembler::translateInstruc(vector<string> instruction)
+/*
+* paramters: vector<string> instruction
+* instruction is the return value from split()
+* check instruction[0] to obtain the instruction type
+*/
 {
     std::string machine_code = "";
     if (instruction[0] == "add")
     { // add rd rs rt
         // machine_code += ("000000" + regMap[instruction[2]] + regMap[instruction[3]]+regMap[instruction[1]] + "00000" + ""
-        isOverflow();
+        
         translate_R_type(0, regMap[instruction[2]], regMap[instruction[3]], regMap[instruction[1]], 0, 0x20);
     }
     else if (instruction[0] == "addu")
@@ -230,7 +225,6 @@ void Simulator::translateInstruc(vector<string> instruction)
     }
     else if (instruction[0] == "addi")
     {
-        isOverflow();
         translate_I_type(8, regMap[instruction[2]], regMap[instruction[1]], stoi(instruction[3]));
     }
     else if (instruction[0] == "addiu")
@@ -259,7 +253,6 @@ void Simulator::translateInstruc(vector<string> instruction)
     else if (instruction[0] == "div")
     {
         // div rs, rt
-        isOverflow();
         translate_R_type(0, regMap[instruction[1]], regMap[instruction[2]], 0, 0, 0x1a);
     }
     else if (instruction[0] == "divu")
@@ -335,7 +328,6 @@ void Simulator::translateInstruc(vector<string> instruction)
     else if (instruction[0] == "sub")
     {
         // sub rd, rs, rt
-        isOverflow();
         translate_R_type(0, regMap[instruction[2]], regMap[instruction[3]], regMap[instruction[1]], 0, 0x22);
     }
     else if (instruction[0] == "subu")

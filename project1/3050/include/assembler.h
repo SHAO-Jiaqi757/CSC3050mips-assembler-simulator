@@ -7,7 +7,7 @@
 
 
 using namespace std;
-class Simulator {
+class Assembler {
     public:
         vector<vector<string> > instructions;
         vector<int> instruction_machine_code;
@@ -17,10 +17,11 @@ class Simulator {
         void translate_I_type(int op, int rs, int rt, int addr);
         void translate_J_type(int op, int addr);
         void readFile(std::string filename);
+        void translateInstruc(vector<string> instruction);
     private:
         void set_regMap();
         int is_valid_label(string label);
-        void translateInstruc(vector<string> instruction);
+        
 };
 
 
