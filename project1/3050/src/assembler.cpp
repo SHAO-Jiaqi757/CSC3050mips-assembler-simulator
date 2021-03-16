@@ -474,12 +474,12 @@ void Assembler::translateInstruc(vector<string> instruction)
         // jr rs
         translate_R_type(0, regMap[instruction[1]], 0, 0, 0, 8);
     }
-    else if (instruction[0] == "tep")
+    else if (instruction[0] == "teq")
     {
         // teq rs, rt
         translate_R_type(0, regMap[instruction[1]], regMap[instruction[2]], 0, 0, 0x34);
     }
-    else if (instruction[0] == "tepi")
+    else if (instruction[0] == "teqi")
     {
         // teqi rs, imm
         translate_I_type(1, regMap[instruction[1]], 0xc, stoi(instruction[2]));
