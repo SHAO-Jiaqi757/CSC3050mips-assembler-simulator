@@ -106,8 +106,6 @@ void Assembler::translate_I_type(int op, int rs, int rt, int addr)
     ans |= (rt << 16);
     ans |= (addr & 65535);
     instruction_machine_code.push_back(ans);
-    // std::string res = std::bitset<32>(ans).to_string();
-    // cout << res << endl;
 }
 
 void Assembler::translate_J_type(int op, int addr)
@@ -149,6 +147,7 @@ vector<string> split(const string &str, const string &delim)
 void Assembler::readFile(std::string filename)
 {
 
+    int32_t pc_ = 0x400000;
     ifstream infile(filename);
     std::string line;
 
@@ -178,7 +177,7 @@ void Assembler::readFile(std::string filename)
             continue;
         if (res[0].back() == ':')
         {
-            res[0].pop_back();
+            res[0].pop_back();  // drop ":"
             labels.insert({res[0], pc_});
             if (res.size() != 1)
             {
@@ -194,8 +193,9 @@ void Assembler::readFile(std::string filename)
         else
         {
             instructions.push_back(res);
+            
         }
-
+        // cout << "PC >>> " << hex << pc_ << endl;
         pc_ += 4;
     }
 
@@ -224,6 +224,7 @@ void Assembler::translateInstruc(vector<string> instruction)
         translate_R_type(0, regMap[instruction[2]], regMap[instruction[3]], regMap[instruction[1]], 0, 0x21);
     }
     else if (instruction[0] == "addi")
+
     {
         translate_I_type(8, regMap[instruction[2]], regMap[instruction[1]], stoi(instruction[3]));
     }
@@ -613,6 +614,8 @@ void Assembler::translateInstruc(vector<string> instruction)
     {
         // error
     }
+
+    pc_+=4;
 }
 
 // int main()

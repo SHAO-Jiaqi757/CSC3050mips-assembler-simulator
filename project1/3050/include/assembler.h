@@ -13,13 +13,14 @@ class Assembler {
         vector<int> instruction_machine_code;
         unordered_map<string, int32_t> labels;
         unordered_map<string, int> regMap;
+
+        
         void translate_R_type(int op, int rs, int rt, int rd, int shamt, int funct);
         void translate_I_type(int op, int rs, int rt, int addr);
         void translate_J_type(int op, int addr);
         void readFile(std::string filename);
         void translateInstruc(vector<string> instruction);
-    private:
-        void set_regMap();
+        void set_regMap();       
         int is_valid_label(string label);
         
 };

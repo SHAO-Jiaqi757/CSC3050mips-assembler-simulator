@@ -50,6 +50,8 @@ void overflow() {
 } // TO-DO  print out the error message and terminate the program execution.
 void add(int rs, int rt, int rd)
 {
+    // cout << "go to add >> " << "add rs[" <<rs << "] : " << reg_values[rs] << ", " <<
+    // "rt[" <<rt << "] : " << reg_values[rt] << endl;
     int rs_v = reg_values[rs];
     int rt_v = reg_values[rt];
     int tmp = rs_v + rt_v;
@@ -59,15 +61,25 @@ void add(int rs, int rt, int rd)
         overflow();
 
     reg_values[rd] = rs_v + rt_v;
+    // cout << "rd[" << rd << "]: " << reg_values[rd] << endl;
 }
 void addu(int rs, int rt, int rd)
 {
+    cout << "go to addu" << endl;
+    
+    printf("[%d] = [%d]{%d} + [%d]{%d} \n", rd, rs, reg_values[rs], rt, reg_values[rt]);
     reg_values[rd] = (unsigned)reg_values[rs] + (unsigned)reg_values[rt];
+    printf("[%d]=%d \n", rd, reg_values[rd]);
 }
 
-void addi(int rs, int rt, int imm)
+void addi(int rs, int rt, int16_t imm)
 {
+   
+    cout << "go to addi" << endl;
+    
+    printf("[%d] = [%d]{%d} + [%d] \n", rt, rs, reg_values[rs], imm);
     // rt = rs + imm
+
     int rs_v = reg_values[rs];
     int tmp = rs_v + imm;
     if (rs_v < 0 && imm < 0 && tmp > 0)
@@ -75,9 +87,10 @@ void addi(int rs, int rt, int imm)
     else if (rs_v > 0 && imm > 0 && tmp < 0)
         overflow();
 
-    reg_values[rt] = rs_v + imm;
+    reg_values[rt] = tmp;
+    printf("[%d]: %d \n", rt, reg_values[rt]);
 }
-void addiu(int rs, int rt, int imm)
+void addiu(int rs, int rt, uint16_t imm)
 {
     reg_values[rt] = (unsigned)reg_values[rs] + (unsigned)imm;
 }
@@ -97,7 +110,7 @@ void clo(int rs, int rd)
     int tmp = 32;
     for (int i = 31; i >= 0; i--)
     {
-        if (rs & (1 << i) == 0)
+        if (reg_values[rs] & (1 << i) == 0)
         {
             tmp = 32 - i;
             break;
@@ -111,7 +124,7 @@ void clz(int rs, int rd)
     int tmp = 32;
     for (int i = 31; i >= 0; i--)
     {
-        if (rs & (1 << i) != 0)
+        if (reg_values[rs] & (1 << i) != 0)
         {
             tmp = 32 - i;
             break;
@@ -209,7 +222,8 @@ void srl(int rt, int rd, int shamt)
 }
 void srlv(int rs, int rt, int rd)
 {
-    reg_values[rd] = (reg_values[rt] >> reg_values[rs]) & ((1 << (32 - rs)) - 1);
+    int shamt = reg_values[rs] & 0b11111;
+    reg_values[rd] = (reg_values[rt] >> shamt) & ((1 << (32-shamt)-1));
 }
 void sub(int rs, int rt, int rd)
 {
@@ -253,7 +267,10 @@ void sltu(int rs, int rt, int rd)
 void slti(int rs, int rt, int imm)
 {
     // rt <- (rs < immediate)
+    // cout << "go to slti >>> " << endl;
+    // cout << "(reg_values[rs] < imm)?  " << reg_values[rs] << "<"  << imm << endl;
     reg_values[rt] = (reg_values[rs] < imm) ? 1 : 0;
+    // cout << rt <<  ": " << reg_values[rt] << endl;
 }
 void sltiu(int rs, int rt, int imm)
 {
@@ -277,7 +294,7 @@ void bgezal(int rs, int offset)
     // if rs >= 0 then procedure_call
 
     int target_offset = offset << 2;
-    reg_values[31] = pc + 4;
+    reg_values[31] = pc;
     if (reg_values[rs] >= 0)
         pc = pc + target_offset;
 }
@@ -288,16 +305,20 @@ void bgtz(int rs, int offset)
     if (reg_values[rs] > 0)
         pc = pc + target_offset;
 }
-void blez(int rs, int offset)
+void blez(int rs, int16_t offset)
 {
+    
     int target_offset = offset << 2;
+    printf("target_offset: %d \n", target_offset);
+    printf("reg_valuesp[%d]: %d \n", rs, reg_values[rs]);
     if (reg_values[rs] <= 0)
         pc = pc + target_offset;
+
 }
 void bltzal(int rs, int offset)
 {
     int target_offset = offset << 2;
-    reg_values[31] = pc + 4;
+    reg_values[31] = pc;
     if (reg_values[rs] < 0)
         pc = pc + target_offset;
 }
@@ -310,6 +331,7 @@ void bltz(int rs, int offset)
 void bne(int rs, int rt, int offset)
 {
     int target_offset = offset << 2;
+    // cout <<"go to bne >>> " << reg_values[rs] <<" == " << reg_values[rt] << endl;
     if (reg_values[rs] != reg_values[rt])
         pc = pc + target_offset;
 }
@@ -320,13 +342,13 @@ void j(int target)
 }
 void jal(int target)
 {
-    reg_values[31] = pc + 4;
-    int pc_4 = pc >> 2 << 28; // 4 bits of pc
-    pc = pc_4 + target << 2;
+    reg_values[31] = pc;
+    int pc_4 = pc & (((1 << 4)-1) << 28); // 4 bits of pc
+    pc = pc_4 + (target << 2);
 }
 void jalr(int rs, int rd)
 {
-    reg_values[rd] = pc + 4;
+    reg_values[rd] = pc;
     pc = reg_values[rs];
 }
 void jr(int rs)
@@ -431,23 +453,26 @@ void tltiu(int rs, int imm)
 }
 void lb(int base, int rt, int offset)
 {
-    reg_values[rt] = *mapMem(reg_values[base] + offset * 4);
+    reg_values[rt] = *mapMem(reg_values[base] + offset);
 }
 void lbu(int base, int rt, int offset)
 {
-    reg_values[rt] = (unsigned)*mapMem(reg_values[base] + offset * 4);
+    reg_values[rt] = (unsigned)*mapMem(reg_values[base] + offset);
 }
 void lh(int base, int rt, int offset)
 {
-    reg_values[rt] = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset * 4));
+    reg_values[rt] = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
 }
 void lhu(int base, int rt, int offset)
 {
-    reg_values[rt] = (unsigned)*reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset * 4));
+    reg_values[rt] = (unsigned)*reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
 }
 void lw(int base, int rt, int offset)
 {
-    reg_values[rt] = *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset * 4));
+    // cout << "go to lw >> " << endl << "rt: " << dec << rt << "|base: " << base << "|offset: " << offset << endl;
+
+    reg_values[rt] = *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset));
+    // cout << "reg_values[" << dec << rt << "]" << " : " << hex << reg_values[rt] << endl;
 }
 void lwl(int base, int rt, int offset)
 {
@@ -479,7 +504,7 @@ void lwl(int base, int rt, int offset)
 void lwr(int base, int rt, int offset)
 {
     int initial_content = reg_values[rt];
-    int target_address = reg_values[rt] + 4 * offset;
+    int target_address = reg_values[rt] + offset;
     int mem_content = *reinterpret_cast<int32_t *>(mapMem(target_address));
 
     int low_2 = base & ((1 << 2) - 1); // lowest two bits of base
@@ -505,24 +530,27 @@ void lwr(int base, int rt, int offset)
 void ll(int base, int rt, int offset)
 {
     // Load Linked Word
-    reg_values[rt] = reg_values[base] + offset * 4;
+    reg_values[rt] = reg_values[base] + offset;
 }
 void sb(int base, int rt, int offset)
 {
-    *mapMem(reg_values[base] + offset * 4) = reg_values[rt];
+    *mapMem(reg_values[base] + offset) = reg_values[rt];
 }
 void sh(int base, int rt, int offset)
 {
-    *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset * 4)) = reg_values[rt];
+    *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
 }
 void sw(int base, int rt, int offset)
 {
-    *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset * 4)) = reg_values[rt];
+    // cout << "go to sw" << endl;
+    // cout << "base: " << dec << base << "|rt: " << rt << "|offset" << offset << endl;
+    *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
+    // cout << "reg_values[" << dec << rt << "]:" << hex << reg_values[rt] << endl;
 }
 void swl(int base, int rt, int offset)
 {
     int initial_content = reg_values[rt];
-    int target_address = reg_values[rt] + 4 * offset;
+    int target_address = reg_values[rt] + offset;
     int32_t *p = reinterpret_cast<int32_t *>(mapMem(target_address));
     int mem_content = *p;
 
@@ -550,7 +578,7 @@ void swl(int base, int rt, int offset)
 void swr(int base, int rt, int offset)
 {
     int initial_content = reg_values[rt];
-    int target_address = reg_values[rt] + 4 * offset;
+    int target_address = reg_values[rt] + offset;
     int32_t *p = reinterpret_cast<int32_t *>(mapMem(target_address));
     int mem_content = *p;
 
@@ -576,7 +604,7 @@ void swr(int base, int rt, int offset)
 }
 void sc(int base, int rt, int offset)
 {
-    *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset * 4)) = reg_values[rt];
+    *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
 }
 void mfhi(int rd)
 {
@@ -603,10 +631,13 @@ void syscall()
     switch (v0)
     {
     case 1: // print_int
-        printf("%d", reg_values[4]);
+        printf("%d",reg_values[4]);
+        // cout << reg_values[4];
         break;
     case 4: // print_stirng
-        cout << mapMem(reg_values[4]) << endl;
+        // cout << "print_string: " << mapMem(reg_values[4]) << endl;
+        printf("%s", mapMem(reg_values[4]));
+        // cout << mapMem(reg_values[4]);
         break;
     case 5: // read_int
         scanf("%d", &reg_values[2]);
@@ -634,9 +665,13 @@ void syscall()
             break;
         }
     case 9:
-        reg_values[2] = dynamic_data_begin; // v0 <- address
-        dynamic_data_begin += reg_values[4];
-        break;
+        {
+            int amount = reg_values[4]*4;
+            dynamic_data_begin += amount-4;
+            reg_values[2] = dynamic_data_begin; // v0 <- address     
+            break;
+        }
+        
     case 10:
         exit(0);
         break;
@@ -646,7 +681,7 @@ void syscall()
         {
             int char_32 = reg_values[4] & ((1 << 8) - 1); // low-order byte (last 8 bits);
             char char_8 = (char)char_32;
-            cout << char_8 << endl;
+            cout << char_8;
             break;
         }
     case 12:
@@ -658,14 +693,14 @@ void syscall()
         // $a0 = address of null-terminated string containing filename
         // $a1 = flags
         // $a2 = mode
-        // $a0 contains file descriptor (negative if error)
+        // $v0 contains file descriptor (negative if error)
         // three flag values: 0 for read-only, 1 for write-only with create, and 9 for write-only with create and append.
         // The returned file descriptor will be negative if the operation failed.
         // File descriptors 0, 1 and 2 are always open for: reading from standard input, writing to standard output, and writing to standard error, respectively
         {
             int flag = reg_values[5];
             int mode = reg_values[6];
-            reg_values[4] = open(mapMem(reg_values[4]), flag, mode);
+            reg_values[2] = open(mapMem(reg_values[4]), flag, mode);
             break;
         }
     }
@@ -674,7 +709,7 @@ void syscall()
             int fd = reg_values[4];
             int address_of_input_buffer = reg_values[5];
             int len = reg_values[6];
-            reg_values[4] = read(fd, mapMem(address_of_input_buffer), len);
+            reg_values[2] = read(fd, mapMem(address_of_input_buffer), len);
             break;
         }
 
@@ -683,7 +718,7 @@ void syscall()
             int fd = reg_values[4];
             int address_of_input_buffer = reg_values[5];
             int len = reg_values[6];
-            reg_values[4] = write(fd, mapMem(address_of_input_buffer), len);
+            reg_values[2] = write(fd, mapMem(address_of_input_buffer), len);
 
             break;
         }
@@ -706,8 +741,9 @@ void syscall()
 /*
 * initialize the registers
 */
-void init()
+void init(Assembler &ass)
 {
+    ass.set_regMap();
     reg_values[29] = 0xA00000; //sp
 }
 
@@ -718,8 +754,12 @@ char* mapMem(u_int32_t virtual_mem)
 
 void putData(string mode, string line)
 {
+     
     if (mode == "word")
     {
+        if (dynamic_data_begin % 4 != 0) {
+            dynamic_data_begin = (dynamic_data_begin / 4) + 1;
+        }  // align
         size_t found = line.find_last_of(".word");
         line = line.substr(found + 1);
         vector<string> v = split(line, "\t\r, ");
@@ -732,26 +772,42 @@ void putData(string mode, string line)
 
     else if (mode == "ascii")
     {
+        int addr_put = dynamic_data_begin;
         size_t found_l = line.find('\"');
         size_t found_r = line.rfind('\"');
         string str = line.substr(found_l + 1, found_r - found_l - 1);
-
-        int n = 1; // one word only available for 4 chars
         int len = str.length();
         size_t i = 0;
         for (i; i < len; i++)
         {
-            *mapMem(dynamic_data_begin) = str[i];
-            dynamic_data_begin += 1;
-        }
+            if (str[i] == '\\') {
+                char nxt = str[i+1];
+                if (nxt == 'n') {
+                    *mapMem(dynamic_data_begin++) = '\n';
+                }
 
-        // the rest characters that are going to next memory block
-        if (dynamic_data_begin % 4 != 0)
-            dynamic_data_begin = (dynamic_data_begin / 4) + 1;
+                else if (nxt == 't') {
+                    *mapMem(dynamic_data_begin++) = '\t';
+                }
+
+                else if (nxt == '0') {
+                    *mapMem(dynamic_data_begin++) = '\0';
+                }
+                else continue;
+
+                i++;
+            }
+            else *mapMem(dynamic_data_begin++) = str[i];
+        }
+            
     }
+
     else if (mode == "half")
     {
 
+        //         if (dynamic_data_begin % 4 != 0) {
+        //     dynamic_data_begin = (dynamic_data_begin / 4) + 1;
+        // }
         size_t found = line.find_last_of(".half");
         line = line.substr(found + 1);
         vector<string> v = split(line, "\t\r, ");
@@ -761,11 +817,11 @@ void putData(string mode, string line)
             dynamic_data_begin += 2;
         }
 
-        if (dynamic_data_begin % 4 != 0)
-            dynamic_data_begin = (dynamic_data_begin / 4) + 1;
+        
     }
     else if (mode == "byte")
     {
+         
         size_t found = line.find_last_of(".byte");
         line = line.substr(found + 1);
         vector<string> v = split(line, "\t\r, ");
@@ -774,9 +830,6 @@ void putData(string mode, string line)
             *mapMem(dynamic_data_begin) = stoi(i); //
             dynamic_data_begin += 1;
         }
-
-        if (dynamic_data_begin % 4 != 0)
-            dynamic_data_begin = (dynamic_data_begin / 4) + 1;
     }
     else
     {
@@ -816,25 +869,30 @@ void readData(std::string filename)
             putData("word", line);
         }
 
+        else if (line.find("asciiz") != std::string::npos)
+        {
+            
+            putData("ascii", line );
+            *mapMem(dynamic_data_begin++) = '\0';
+        }
+
         else if (line.find("ascii") != std::string::npos)
         {
             putData("ascii", line);
         }
 
-        else if (line.find("asciiz") != std::string::npos)
-        {
-            putData("ascii", line + '\0');
-        }
-
         else if (line.find("half") != std::string::npos)
         {
-            *mapMem(dynamic_data_begin) = stoi(split(line, "\t\r ").back()); // 16-bit quantities
-            dynamic_data_begin += 4;
+            putData("half", line);
         }
 
         else if (line.find("byte") != std::string::npos)
         {
+            putData("byte", line);
         }
+
+        if (dynamic_data_begin % 4 != 0)
+            dynamic_data_begin = ((dynamic_data_begin / 4) + 1) * 4;
     }
 
     infile.close();
@@ -846,30 +904,51 @@ void putText(vector<int> instruction_machine_code)
     for (int32_t i : instruction_machine_code)
     {
         *reinterpret_cast<int32_t *>(mapMem(text_addr)) = i;
-        // cout << i << endl;
+        // cout << bitset<32> (i).to_string() << endl;
         text_addr += 4;
     }
+    
 }
 
 void readInstruction()
 {
 
-    u_int32_t pc = 0x400000;
-    while (*mapMem(pc))
+    while (*reinterpret_cast<int32_t *>(mapMem(pc)))
     {
-        int32_t mc = *mapMem(pc);
+        cout <<hex <<  pc << endl;
+        
+        int32_t mc = *reinterpret_cast<int32_t*>( mapMem(pc));
+        int op = (mc >> 26) & 0b111111;
+        int func = mc & 0b111111; // last 6 bits
+        int rs = (mc >> 21) & 0b11111;
+        int rt = (mc >> 16) & 0b11111;
+        int rd = (mc >> 11) & 0b11111;
+        int shamt = (mc >> 6) & 0b11111;
 
-        int op = mc >> 26;
-        int func = mc & 0x111111; // last 6 bits
-        int rs = (mc >> 21) & 0x11111;
-        int rt = (mc >> 16) & 0x11111;
-        int rd = (mc >> 11) & 0x11111;
-        int shamt = (mc >> 6) & 0x11111;
 
+        // int flag = false;
+        // if (pc == 0x40009c)
+        // {cout << "op: " << op << endl <<
+        // "func: " << func << endl <<
+        // "rs: " << rs << endl <<
+        // "rt: " << rt << endl <<
+        // "rd: " << rd << endl << 
+        // "shamt: " << shamt << endl << endl;
+        // flag = true;
+        // }
+        pc += 4;
+        // cout << hex << mc << endl;
+        
         if (op == 0)
         {
             if (func == 0x20)
-                add(rs, rt, rd);
+                {
+                    // cout  << "add >> " << hex <<  mc
+                    // << endl << dec << 
+                    // "rs: " << rs << "|rt :" << rt << "|rd :" << rd << endl; 
+                    // cout << "(mc >> 11) & 0b11111 " << ((mc >> 11) & 0b11111) << endl;
+                    add(rs, rt, rd);
+                    }
             else if (func == 0x21)
                 addu(rs, rt, rd);
             else if (func == 0x24)
@@ -961,9 +1040,10 @@ void readInstruction()
 
         else if (op == 2)
             j((mc << 6) >> 6);
-        else if (op == 3)
-            jal((mc << 6) >> 6);
-
+        else if (op == 3) {
+            jal((mc & ((1 << 26)-1)));
+        }
+           
         else if (op == 4)
             beq(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 5)
@@ -972,8 +1052,10 @@ void readInstruction()
             blez(rs, mc & ((1 << 16) - 1));
         else if (op == 7)
             bgtz(rs, mc & ((1 << 16) - 1));
-        else if (op == 8)
+        else if (op == 8) {
             addi(rs, rt, mc & ((1 << 16) - 1));
+        }
+            
         else if (op == 9)
             addiu(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0xc)
@@ -1012,8 +1094,10 @@ void readInstruction()
             lh(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0x22)
             lwl(rs, rt, mc & ((1 << 16) - 1));
-        else if (op == 0x23)
+        else if (op == 0x23) {
             lw(rs, rt, mc & ((1 << 16) - 1));
+        }
+            
         else if (op == 0x24)
             lbu(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0x25)
@@ -1035,7 +1119,6 @@ void readInstruction()
         else if (op == 0x38)
             sc(rs, rt, mc & ((1 << 16) - 1));
 
-        pc += 4;
     }
 }
 
@@ -1053,10 +1136,11 @@ things. write a C/C++ function for each instruction to do what it's supposed to
 
 int main()
 {
-    string filename = "/Users/jiaqishao/Downloads/simulator-samples/a-plus-b.asm";
-    init();             // set register
+    string filename = "/Users/jiaqishao/Downloads/simulator-samples/memcpy-hello-world.asm";
+                // set register
     readData(filename); // get addresss where the dynamic data begins;
     Assembler assembler;
+    init(assembler); 
     assembler.readFile(filename);
     for (auto i : assembler.instructions)
     {
@@ -1065,6 +1149,7 @@ int main()
 
     putText(assembler.instruction_machine_code);
 
+    pc = 0x400000;
     readInstruction();
     // u_int32_t static_data_addr = static_data_begin;
 
