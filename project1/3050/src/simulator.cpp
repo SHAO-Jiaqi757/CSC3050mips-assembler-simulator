@@ -17,6 +17,8 @@ dynamically allocate a block of memory with C/C++, with a size of 6MB.
 
 using namespace std;
 
+
+
 size_t max_size = 6 * 1024 * 1024; // 6MB
 size_t text_segment = 1 * 1024 * 1024;
 const u_int32_t start_addr = 0x400000;
@@ -26,10 +28,8 @@ u_int32_t stack_begin = 0xA00000; // goes downwards, address will decrease;
 
 char *real_mem = (char *)malloc(max_size); //  "real_mem" storing the real address of the block of memory allocated.
 
-/*
-* map virtual_mem to the real allocated memory
-* return a pointer that stores the address of real memory
-*/
+FILE *infile;
+FILE *outfile;
 
 vector<int32_t> reg_values(34, 0); // add LO, HI registers, LO at 32, HI at 33
 
@@ -37,14 +37,27 @@ u_int32_t pc = 0x400000;
 
 unordered_map<std::string, int32_t> labels;
 vector<vector<string>> instructions;
-char* mapMem(u_int32_t virtual_mem);
+char *mapMem(u_int32_t virtual_mem);
 void readData(string filename); //
 void readText(string filename);
 void putText(vector<int> instruction_machine_code);
 void putData(string mode, string line);
 void readInstruction();
+int sign_extension(int short_);
 
-void overflow() {
+int sign_extension(int short_)
+{
+    int sign_mask = (1 << 15);
+    int sign = short_ & sign_mask;
+    if (sign == sign_mask)
+    {
+        short_ = short_ | (((1 << 16) - 1) << 16);
+    }
+
+    return short_;
+}
+void overflow()
+{
     cout << "Overflow!" << endl;
     exit(EXIT_FAILURE);
 } // TO-DO  print out the error message and terminate the program execution.
@@ -65,21 +78,18 @@ void add(int rs, int rt, int rd)
 }
 void addu(int rs, int rt, int rd)
 {
-    cout << "go to addu" << endl;
-    
-    printf("[%d] = [%d]{%d} + [%d]{%d} \n", rd, rs, reg_values[rs], rt, reg_values[rt]);
+    // cout << "go to addu" << endl;
+
+    // printf("[%d] = [%d]{%d} + [%d]{%d} \n", rd, rs, reg_values[rs], rt, reg_values[rt]);
     reg_values[rd] = (unsigned)reg_values[rs] + (unsigned)reg_values[rt];
-    printf("[%d]=%d \n", rd, reg_values[rd]);
+    // printf("[%d]=%d \n", rd, reg_values[rd]);
 }
 
 void addi(int rs, int rt, int16_t imm)
 {
-   
-    cout << "go to addi" << endl;
-    
-    printf("[%d] = [%d]{%d} + [%d] \n", rt, rs, reg_values[rs], imm);
     // rt = rs + imm
 
+    imm = sign_extension(imm);
     int rs_v = reg_values[rs];
     int tmp = rs_v + imm;
     if (rs_v < 0 && imm < 0 && tmp > 0)
@@ -88,10 +98,11 @@ void addi(int rs, int rt, int16_t imm)
         overflow();
 
     reg_values[rt] = tmp;
-    printf("[%d]: %d \n", rt, reg_values[rt]);
+    // printf("[%d]: %d \n", rt, reg_values[rt]);
 }
 void addiu(int rs, int rt, uint16_t imm)
 {
+    imm = sign_extension(imm);
     reg_values[rt] = (unsigned)reg_values[rs] + (unsigned)imm;
 }
 void and_(int rs, int rt, int rd)
@@ -197,6 +208,7 @@ void or_(int rs, int rt, int rd)
 void ori(int rs, int rt, int imm)
 {
     reg_values[rt] = (reg_values[rs] | imm);
+    // printf("reg_values[%d]{%d} = (reg_values[%d]{%d} | %d\n)", rt,reg_values[rt], rs, reg_values[rs], imm);
 }
 void sll(int rt, int rd, int shamt)
 {
@@ -223,7 +235,7 @@ void srl(int rt, int rd, int shamt)
 void srlv(int rs, int rt, int rd)
 {
     int shamt = reg_values[rs] & 0b11111;
-    reg_values[rd] = (reg_values[rt] >> shamt) & ((1 << (32-shamt)-1));
+    reg_values[rd] = (reg_values[rt] >> shamt) & ((1 << (32 - shamt) - 1));
 }
 void sub(int rs, int rt, int rd)
 {
@@ -254,6 +266,7 @@ void xori(int rs, int rt, int imm)
 void lui(int rt, int imm)
 {
     reg_values[rt] = imm << 16;
+    // cout << "reg[" << rt << "]" << " >> " << reg_values[rt] << endl;
 }
 void slt(int rs, int rt, int rd)
 {
@@ -262,29 +275,33 @@ void slt(int rs, int rt, int rd)
 }
 void sltu(int rs, int rt, int rd)
 {
-    reg_values[rd] = ((unsigned)reg_values[rs] < (unsigned)reg_values[rt]) ? 1 : 0;
+    reg_values[rd] = (reg_values[rs] < (unsigned)reg_values[rt]) ? 1 : 0;
 }
 void slti(int rs, int rt, int imm)
 {
     // rt <- (rs < immediate)
-    // cout << "go to slti >>> " << endl;
-    // cout << "(reg_values[rs] < imm)?  " << reg_values[rs] << "<"  << imm << endl;
+    imm = sign_extension(imm);
     reg_values[rt] = (reg_values[rs] < imm) ? 1 : 0;
     // cout << rt <<  ": " << reg_values[rt] << endl;
 }
 void sltiu(int rs, int rt, int imm)
 {
-    reg_values[rt] = ((unsigned)reg_values[rs] < (unsigned)imm) ? 1 : 0;
+    imm = sign_extension(imm);
+    reg_values[rt] = (reg_values[rs] < (unsigned)imm) ? 1 : 0;
 }
 void beq(int rs, int rt, int offset)
 {
+
+    offset = sign_extension(offset); // extend offset to 31 bits
     // PC should keep one word forward.
     int target_offset = offset << 2;
+
     if (reg_values[rs] == reg_values[rt])
-        pc = pc + target_offset;
+        pc += (target_offset);
 }
 void bgez(int rs, int offset)
 {
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     if (reg_values[rs] >= 0)
         pc = pc + target_offset;
@@ -292,7 +309,7 @@ void bgez(int rs, int offset)
 void bgezal(int rs, int offset)
 {
     // if rs >= 0 then procedure_call
-
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     reg_values[31] = pc;
     if (reg_values[rs] >= 0)
@@ -300,23 +317,22 @@ void bgezal(int rs, int offset)
 }
 void bgtz(int rs, int offset)
 {
-
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     if (reg_values[rs] > 0)
         pc = pc + target_offset;
 }
 void blez(int rs, int16_t offset)
 {
-    
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
-    printf("target_offset: %d \n", target_offset);
-    printf("reg_valuesp[%d]: %d \n", rs, reg_values[rs]);
+
     if (reg_values[rs] <= 0)
         pc = pc + target_offset;
-
 }
 void bltzal(int rs, int offset)
 {
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     reg_values[31] = pc;
     if (reg_values[rs] < 0)
@@ -324,12 +340,14 @@ void bltzal(int rs, int offset)
 }
 void bltz(int rs, int offset)
 {
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     if (reg_values[rs] < 0)
         pc = pc + target_offset;
 }
 void bne(int rs, int rt, int offset)
 {
+    offset = sign_extension(offset);
     int target_offset = offset << 2;
     // cout <<"go to bne >>> " << reg_values[rs] <<" == " << reg_values[rt] << endl;
     if (reg_values[rs] != reg_values[rt])
@@ -337,14 +355,14 @@ void bne(int rs, int rt, int offset)
 }
 void j(int target)
 {
-    int pc_4 = pc >> 2 << 28; // 4 bits of pc
-    pc = pc_4 + target << 2;
+    int pc_4 = pc & (((1 << 4) - 1) << 28); // 4 bits of pc
+    pc = pc_4 + ((target << 2) & ((1 << 28) - 1));
 }
 void jal(int target)
 {
     reg_values[31] = pc;
-    int pc_4 = pc & (((1 << 4)-1) << 28); // 4 bits of pc
-    pc = pc_4 + (target << 2);
+    int pc_4 = pc & (((1 << 4) - 1) << 28); // 4 bits of pc
+    pc = pc_4 + ((target << 2) & ((1 << 28) - 1));
 }
 void jalr(int rs, int rd)
 {
@@ -365,6 +383,7 @@ void teq(int rs, int rt)
 }
 void teqi(int rs, int imm)
 {
+    imm = sign_extension(imm);
     if (reg_values[rs] == imm)
     {
         cout << "Trap if equal immediate" << endl;
@@ -381,6 +400,7 @@ void tne(int rs, int rt)
 }
 void tnei(int rs, int imm)
 {
+    imm = sign_extension(imm);
     if (reg_values[rs] != imm)
     {
         cout << "Trap if not equal immediate" << endl;
@@ -397,7 +417,7 @@ void tge(int rs, int rt)
 }
 void tgeu(int rs, int rt)
 {
-    if ((unsigned)reg_values[rs] >= (unsigned)reg_values[rt])
+    if (reg_values[rs] >= (unsigned)reg_values[rt])
     {
         cout << "Trap if greater or equal unsigned" << endl;
         exit(EXIT_FAILURE);
@@ -405,6 +425,7 @@ void tgeu(int rs, int rt)
 }
 void tgei(int rs, int imm)
 {
+    imm = sign_extension(imm);
     if (reg_values[rs] >= imm)
     {
         cout << "Trap if greater or equal" << endl;
@@ -413,7 +434,8 @@ void tgei(int rs, int imm)
 }
 void tgeiu(int rs, int imm)
 {
-    if ((unsigned)reg_values[rs] >= (unsigned)imm)
+    imm = sign_extension(imm);
+    if (reg_values[rs] >= (unsigned)imm)
     {
         cout << "Trap if greater or equal unsigned" << endl;
         exit(EXIT_FAILURE);
@@ -437,6 +459,7 @@ void tltu(int rs, int rt)
 }
 void tlti(int rs, int imm)
 {
+    imm = sign_extension(imm);
     if (reg_values[rs] < imm)
     {
         cout << "Trap if less than immediate" << endl;
@@ -445,7 +468,8 @@ void tlti(int rs, int imm)
 }
 void tltiu(int rs, int imm)
 {
-    if ((unsigned)reg_values[rs] < (unsigned)imm)
+    imm = sign_extension(imm);
+    if (reg_values[rs] < (unsigned)imm)
     {
         cout << "Trap if less than immediate" << endl;
         exit(EXIT_FAILURE);
@@ -453,29 +477,38 @@ void tltiu(int rs, int imm)
 }
 void lb(int base, int rt, int offset)
 {
-    reg_values[rt] = *mapMem(reg_values[base] + offset);
+    offset = sign_extension(offset);
+    int tmp = *(mapMem(reg_values[base] + offset)); // upper 24bits all zeros
+    int mask = (1 << 7);
+    int sign = (tmp & mask == mask) ? 1 : 0; // the 8th bit
+    reg_values[rt] = (sign == 1) ? (((1 << 24) - 1) << 8) & tmp : tmp;
 }
 void lbu(int base, int rt, int offset)
 {
-    reg_values[rt] = (unsigned)*mapMem(reg_values[base] + offset);
+    offset = sign_extension(offset);
+    reg_values[rt] = *(mapMem(reg_values[base] + offset));
 }
 void lh(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     reg_values[rt] = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
 }
 void lhu(int base, int rt, int offset)
 {
-    reg_values[rt] = (unsigned)*reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
+    offset = sign_extension(offset);
+    int tmp = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
+    reg_values[rt] = tmp & ((1 << 16) - 1); // zero-extended
 }
 void lw(int base, int rt, int offset)
 {
     // cout << "go to lw >> " << endl << "rt: " << dec << rt << "|base: " << base << "|offset: " << offset << endl;
-
+    offset = sign_extension(offset);
     reg_values[rt] = *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset));
     // cout << "reg_values[" << dec << rt << "]" << " : " << hex << reg_values[rt] << endl;
 }
 void lwl(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     int initial_content = reg_values[rt];
     int target_address = reg_values[rt] + 4 * offset;
     int mem_content = *reinterpret_cast<int32_t *>(mapMem(target_address));
@@ -503,6 +536,7 @@ void lwl(int base, int rt, int offset)
 }
 void lwr(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     int initial_content = reg_values[rt];
     int target_address = reg_values[rt] + offset;
     int mem_content = *reinterpret_cast<int32_t *>(mapMem(target_address));
@@ -534,21 +568,23 @@ void ll(int base, int rt, int offset)
 }
 void sb(int base, int rt, int offset)
 {
-    *mapMem(reg_values[base] + offset) = reg_values[rt];
+    offset = sign_extension(offset);
+    *(mapMem(reg_values[base] + offset)) = reg_values[rt];
 }
 void sh(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
 }
 void sw(int base, int rt, int offset)
 {
-    // cout << "go to sw" << endl;
-    // cout << "base: " << dec << base << "|rt: " << rt << "|offset" << offset << endl;
+    offset = sign_extension(offset);
     *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
     // cout << "reg_values[" << dec << rt << "]:" << hex << reg_values[rt] << endl;
 }
 void swl(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     int initial_content = reg_values[rt];
     int target_address = reg_values[rt] + offset;
     int32_t *p = reinterpret_cast<int32_t *>(mapMem(target_address));
@@ -577,6 +613,7 @@ void swl(int base, int rt, int offset)
 }
 void swr(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     int initial_content = reg_values[rt];
     int target_address = reg_values[rt] + offset;
     int32_t *p = reinterpret_cast<int32_t *>(mapMem(target_address));
@@ -604,6 +641,7 @@ void swr(int base, int rt, int offset)
 }
 void sc(int base, int rt, int offset)
 {
+    offset = sign_extension(offset);
     *reinterpret_cast<int32_t *>(mapMem(reg_values[base] + offset)) = reg_values[rt];
 }
 void mfhi(int rd)
@@ -626,21 +664,20 @@ void syscall()
 {
     // 1, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
     int v0 = reg_values[2];
-    fstream file;
 
     switch (v0)
     {
     case 1: // print_int
-        printf("%d",reg_values[4]);
-        // cout << reg_values[4];
+      
+        fprintf(outfile, "%d", reg_values[4]);
+        // printf("%d", reg_values[4]);
         break;
     case 4: // print_stirng
-        // cout << "print_string: " << mapMem(reg_values[4]) << endl;
-        printf("%s", mapMem(reg_values[4]));
+        fprintf(outfile, "%s", mapMem(reg_values[4]));
         // cout << mapMem(reg_values[4]);
         break;
     case 5: // read_int
-        scanf("%d", &reg_values[2]);
+        fscanf(infile, "%d", &reg_values[2]);
         break;
     case 8:
         // For specified length n, string can be no longer than n-1.
@@ -652,7 +689,9 @@ void syscall()
             memset(str, '\0', sizeof(str));
             int maxlen = reg_values[5];
             int addr = reg_values[4]; // address of input buffer
-            scanf("%s", str);
+            
+            fgets(str, maxlen-1, infile);
+            // ifile >> str;
             for (int i = 0; i < maxlen - 1; i++)
             {
                 if (str[i] == '\0')
@@ -665,13 +704,14 @@ void syscall()
             break;
         }
     case 9:
-        {
-            int amount = reg_values[4]*4;
-            dynamic_data_begin += amount-4;
-            reg_values[2] = dynamic_data_begin; // v0 <- address     
-            break;
-        }
-        
+    {
+
+        reg_values[2] = dynamic_data_begin; // v0 <- address
+        int amount = reg_values[4];
+        dynamic_data_begin += amount;
+        break;
+    }
+
     case 10:
         exit(0);
         break;
@@ -681,12 +721,13 @@ void syscall()
         {
             int char_32 = reg_values[4] & ((1 << 8) - 1); // low-order byte (last 8 bits);
             char char_8 = (char)char_32;
-            cout << char_8;
+            fputc(char_8, outfile);
             break;
         }
     case 12:
         // read character
-        scanf("%c", reg_values[4]);
+        reg_values[4] = fgetc(infile);
+        // scanf("%c", reg_values[4]);
         break;
     case 13:
     {
@@ -705,35 +746,36 @@ void syscall()
         }
     }
     case 14:
-        {
-            int fd = reg_values[4];
-            int address_of_input_buffer = reg_values[5];
-            int len = reg_values[6];
-            reg_values[2] = read(fd, mapMem(address_of_input_buffer), len);
-            break;
-        }
+    {
+        int fd = reg_values[4];
+        int address_of_input_buffer = reg_values[5];
+        int len = reg_values[6];
+        reg_values[2] = read(fileno(infile), mapMem(address_of_input_buffer), len);
+        break;
+    }
 
     case 15:
-        {
-            int fd = reg_values[4];
-            int address_of_input_buffer = reg_values[5];
-            int len = reg_values[6];
-            reg_values[2] = write(fd, mapMem(address_of_input_buffer), len);
+    {
 
-            break;
-        }
+        int fd = reg_values[4];
+        int address_of_input_buffer = reg_values[5];
+        int len = reg_values[6];
+        reg_values[2] = write(fileno(outfile), mapMem(address_of_input_buffer), len);
+
+        break;
+    }
     case 16:
-        {
-            int fd = reg_values[4];
-            close(fd);
-            break;
-        }
+    {
+        int fd = reg_values[4];
+        close(fd);
+        break;
+    }
     case 17:
-        {
-            int result = reg_values[4];
-            exit(result);
-            break;
-        }
+    {
+        int result = reg_values[4];
+        exit(result);
+        break;
+    }
     default:
         break;
     }
@@ -747,25 +789,31 @@ void init(Assembler &ass)
     reg_values[29] = 0xA00000; //sp
 }
 
-char* mapMem(u_int32_t virtual_mem)
+/*
+* map virtual_mem to the real allocated memory
+* return a pointer that stores the address of real memory
+*/
+char *mapMem(u_int32_t virtual_mem)
 {
     return (real_mem) + virtual_mem - start_addr;
 }
 
 void putData(string mode, string line)
 {
-     
+
     if (mode == "word")
     {
-        if (dynamic_data_begin % 4 != 0) {
+        if (dynamic_data_begin % 4 != 0)
+        {
             dynamic_data_begin = (dynamic_data_begin / 4) + 1;
-        }  // align
+        } // align
         size_t found = line.find_last_of(".word");
         line = line.substr(found + 1);
         vector<string> v = split(line, "\t\r, ");
         for (auto i : v)
         {
             *reinterpret_cast<int32_t *>(mapMem(dynamic_data_begin)) = stoi(i); // 32-bit quantities
+            // cout << "put " << i << "into " << " >> " << dynamic_data_begin << endl;
             dynamic_data_begin += 4;
         }
     }
@@ -780,26 +828,35 @@ void putData(string mode, string line)
         size_t i = 0;
         for (i; i < len; i++)
         {
-            if (str[i] == '\\') {
-                char nxt = str[i+1];
-                if (nxt == 'n') {
+            if (str[i] == '\\')
+            {
+                char nxt = str[i + 1];
+                if (nxt == 'n')
+                {
                     *mapMem(dynamic_data_begin++) = '\n';
+                    // cout << "put " <<  "\\n "<< " into " << " >> " << hex << dynamic_data_begin-1 << endl;
                 }
 
-                else if (nxt == 't') {
+                else if (nxt == 't')
+                {
                     *mapMem(dynamic_data_begin++) = '\t';
                 }
 
-                else if (nxt == '0') {
+                else if (nxt == '0')
+                {
                     *mapMem(dynamic_data_begin++) = '\0';
                 }
-                else continue;
+                else
+                    continue;
 
                 i++;
             }
-            else *mapMem(dynamic_data_begin++) = str[i];
+            else
+            {
+                *mapMem(dynamic_data_begin++) = str[i];
+                // cout << "put " << str[i] << " into " << " >> " << hex << dynamic_data_begin-1 << endl;
+            }
         }
-            
     }
 
     else if (mode == "half")
@@ -816,12 +873,10 @@ void putData(string mode, string line)
             *reinterpret_cast<int16_t *>(mapMem(dynamic_data_begin)) = (int16_t)stoi(i); // 16-bit quantities
             dynamic_data_begin += 2;
         }
-
-        
     }
     else if (mode == "byte")
     {
-         
+
         size_t found = line.find_last_of(".byte");
         line = line.substr(found + 1);
         vector<string> v = split(line, "\t\r, ");
@@ -836,7 +891,7 @@ void putData(string mode, string line)
         cout << "unsupported data type" << endl;
     }
 }
-void readData(std::string filename)
+void readData(string filename)
 {
 
     ifstream infile(filename);
@@ -871,8 +926,8 @@ void readData(std::string filename)
 
         else if (line.find("asciiz") != std::string::npos)
         {
-            
-            putData("ascii", line );
+
+            putData("ascii", line);
             *mapMem(dynamic_data_begin++) = '\0';
         }
 
@@ -907,7 +962,6 @@ void putText(vector<int> instruction_machine_code)
         // cout << bitset<32> (i).to_string() << endl;
         text_addr += 4;
     }
-    
 }
 
 void readInstruction()
@@ -915,9 +969,9 @@ void readInstruction()
 
     while (*reinterpret_cast<int32_t *>(mapMem(pc)))
     {
-        cout <<hex <<  pc << endl;
-        
-        int32_t mc = *reinterpret_cast<int32_t*>( mapMem(pc));
+        // cout <<hex <<  pc << ">>>  ";
+
+        int32_t mc = *reinterpret_cast<int32_t *>(mapMem(pc));
         int op = (mc >> 26) & 0b111111;
         int func = mc & 0b111111; // last 6 bits
         int rs = (mc >> 21) & 0b11111;
@@ -925,30 +979,13 @@ void readInstruction()
         int rd = (mc >> 11) & 0b11111;
         int shamt = (mc >> 6) & 0b11111;
 
-
-        // int flag = false;
-        // if (pc == 0x40009c)
-        // {cout << "op: " << op << endl <<
-        // "func: " << func << endl <<
-        // "rs: " << rs << endl <<
-        // "rt: " << rt << endl <<
-        // "rd: " << rd << endl << 
-        // "shamt: " << shamt << endl << endl;
-        // flag = true;
-        // }
         pc += 4;
-        // cout << hex << mc << endl;
-        
+        // cout << bitset<32> (mc) << endl;
+
         if (op == 0)
         {
             if (func == 0x20)
-                {
-                    // cout  << "add >> " << hex <<  mc
-                    // << endl << dec << 
-                    // "rs: " << rs << "|rt :" << rt << "|rd :" << rd << endl; 
-                    // cout << "(mc >> 11) & 0b11111 " << ((mc >> 11) & 0b11111) << endl;
-                    add(rs, rt, rd);
-                    }
+                add(rs, rt, rd);
             else if (func == 0x21)
                 addu(rs, rt, rd);
             else if (func == 0x24)
@@ -1040,22 +1077,28 @@ void readInstruction()
 
         else if (op == 2)
             j((mc << 6) >> 6);
-        else if (op == 3) {
-            jal((mc & ((1 << 26)-1)));
+        else if (op == 3)
+        {
+            jal((mc & ((1 << 26) - 1)));
         }
-           
+
         else if (op == 4)
-            beq(rs, rt, mc & ((1 << 16) - 1));
+        {
+            // cout << bitset<32>(mc) << " <<>>><" << (int16_t)(mc & ((1 << 16) - 1)) << endl;
+            beq(rs, rt, (mc & ((1 << 16) - 1)));
+        }
+
         else if (op == 5)
             bne(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 6)
             blez(rs, mc & ((1 << 16) - 1));
         else if (op == 7)
             bgtz(rs, mc & ((1 << 16) - 1));
-        else if (op == 8) {
+        else if (op == 8)
+        {
             addi(rs, rt, mc & ((1 << 16) - 1));
         }
-            
+
         else if (op == 9)
             addiu(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0xc)
@@ -1094,10 +1137,11 @@ void readInstruction()
             lh(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0x22)
             lwl(rs, rt, mc & ((1 << 16) - 1));
-        else if (op == 0x23) {
+        else if (op == 0x23)
+        {
             lw(rs, rt, mc & ((1 << 16) - 1));
         }
-            
+
         else if (op == 0x24)
             lbu(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0x25)
@@ -1118,7 +1162,6 @@ void readInstruction()
             ll(rs, rt, mc & ((1 << 16) - 1));
         else if (op == 0x38)
             sc(rs, rt, mc & ((1 << 16) - 1));
-
     }
 }
 
@@ -1134,14 +1177,24 @@ indicates.
 things. write a C/C++ function for each instruction to do what it's supposed to
 */
 
-int main()
+int main(int argc, char **argv)
 {
-    string filename = "/Users/jiaqishao/Downloads/simulator-samples/memcpy-hello-world.asm";
-                // set register
-    readData(filename); // get addresss where the dynamic data begins;
+    if (argc < 4)
+    {
+        printf("wrong number of arguments");
+    }
+    
+    
+    
+    infile = fopen(argv[2], "r");
+    outfile = fopen(argv[3], "w");
+
+
+    readData(argv[1]); // read and put data; get addresss where the dynamic data begins;
     Assembler assembler;
-    init(assembler); 
-    assembler.readFile(filename);
+    init(assembler);
+    assembler.readFile(argv[1]);
+
     for (auto i : assembler.instructions)
     {
         assembler.translateInstruc(i);
@@ -1149,16 +1202,14 @@ int main()
 
     putText(assembler.instruction_machine_code);
 
-    pc = 0x400000;
+    pc = 0x400000;  // set pc at the beginning;
     readInstruction();
-    // u_int32_t static_data_addr = static_data_begin;
 
-    // string line = ".half 23, 255, 120";
-    // putData("half", line);
-
-    // int32_t v = 0x500000;
-    // auto res = mapMem(v);
-    // cout << hex <<  res;
+    // close files
+    fclose(infile);
+    fclose(outfile);
+    
+    free(real_mem); // free allocated memory;
 
     return 0;
 }

@@ -7,6 +7,7 @@
         "optional": "cpp",
         "numeric": "cpp",
         "cmath": "cpp",
-        "bitset": "cpp"
+        "bitset": "cpp",
+        "fstream": "cpp"
     }
 }

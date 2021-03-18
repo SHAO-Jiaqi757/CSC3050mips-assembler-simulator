@@ -1,6 +1,6 @@
 CXX = g++-10
 CXXFLAGS = -g
-EXEC = main
+EXEC = simulator
 OBJS = assembler.o simulator.o # List of object files needed to
  # build the executable.
 SRC = ./src
