@@ -513,7 +513,7 @@ void lwl(int base, int rt, int offset)
 {
     offset = sign_extension(offset);
     int initial_content = reg_values[rt];
-    int target_address = reg_values[rt] + 4 * offset;
+    int target_address = reg_values[rt] + offset;
     int mem_content = *reinterpret_cast<int32_t *>(mapMem(target_address));
 
     int low_2 = base & ((1 << 2) - 1); // lowest two bits of base
