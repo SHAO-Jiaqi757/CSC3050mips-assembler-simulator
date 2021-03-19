@@ -564,7 +564,8 @@ void lwr(int base, int rt, int offset)
 void ll(int base, int rt, int offset)
 {
     // Load Linked Word
-    reg_values[rt] = reg_values[base] + offset;
+    int target_addr = sign_extension(offset) + reg_values[base];
+    reg_values[rt] = * reinterpret_cast<int32_t*> (mapMem(target_addr));
 }
 void sb(int base, int rt, int offset)
 {
