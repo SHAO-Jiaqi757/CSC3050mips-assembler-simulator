@@ -171,6 +171,13 @@ void Assembler::readFile(std::string filename)
         if (line.length() == 0) // blank line
             continue;
 
+        // If there is no space between label and instructions
+        size_t found_label = line.find(":");
+        if (found_label != string::npos) {
+            line.insert(found_label+1, " ");
+            // add space for following split;
+        }
+
         vector<string> res = split(line, ",$\t\r() ");
 
         if (res.size() == 0)
