@@ -58,7 +58,7 @@ int sign_extension(int short_)
 }
 void overflow()
 {
-    cout << "Overflow!" << endl;
+    fprintf(outfile,"Overflow!");
     exit(EXIT_FAILURE);
 } // TO-DO  print out the error message and terminate the program execution.
 void add(int rs, int rt, int rd)
@@ -377,7 +377,7 @@ void teq(int rs, int rt)
 {
     if (reg_values[rs] == reg_values[rt])
     {
-        cout << "Trap if equal" << endl;
+        fprintf(outfile, "Trap if equal");
         exit(EXIT_FAILURE);
     }
 }
@@ -386,7 +386,7 @@ void teqi(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] == imm)
     {
-        cout << "Trap if equal immediate" << endl;
+        fprintf(outfile, "Trap if equal immediate");
         exit(EXIT_FAILURE);
     }
 }
@@ -394,7 +394,7 @@ void tne(int rs, int rt)
 {
     if (reg_values[rs] != reg_values[rt])
     {
-        cout << "Trap if not equal" << endl;
+        fprintf(outfile, "Trap if not equal");
         exit(EXIT_FAILURE);
     }
 }
@@ -403,7 +403,7 @@ void tnei(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] != imm)
     {
-        cout << "Trap if not equal immediate" << endl;
+        fprintf(outfile, "Trap if not equal immediate");
         exit(EXIT_FAILURE);
     }
 }
@@ -411,15 +411,16 @@ void tge(int rs, int rt)
 {
     if (reg_values[rs] >= reg_values[rt])
     {
-        cout << "Trap if greater or equal" << endl;
+        fprintf(outfile, "Trap if greater or equal");
         exit(EXIT_FAILURE);
     }
 }
 void tgeu(int rs, int rt)
 {
+    
     if (reg_values[rs] >= (unsigned)reg_values[rt])
     {
-        cout << "Trap if greater or equal unsigned" << endl;
+        fprintf(outfile, "Trap if greater or equal unsigned");
         exit(EXIT_FAILURE);
     }
 }
@@ -428,7 +429,7 @@ void tgei(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] >= imm)
     {
-        cout << "Trap if greater or equal" << endl;
+        fprintf(outfile, "Trap if greater or equal");
         exit(EXIT_FAILURE);
     }
 }
@@ -437,7 +438,7 @@ void tgeiu(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] >= (unsigned)imm)
     {
-        cout << "Trap if greater or equal unsigned" << endl;
+        fprintf(outfile, "Trap if greater or equal unsigned");
         exit(EXIT_FAILURE);
     }
 }
@@ -445,7 +446,7 @@ void tlt(int rs, int rt)
 {
     if (reg_values[rs] < reg_values[rt])
     {
-        cout << "Trap if less than" << endl;
+        fprintf(outfile, "Trap if less than");
         exit(EXIT_FAILURE);
     }
 }
@@ -453,7 +454,7 @@ void tltu(int rs, int rt)
 {
     if ((unsigned)reg_values[rs] < (unsigned)reg_values[rt])
     {
-        cout << "Trap if less than unsigned" << endl;
+        fprintf(outfile, "Trap if less than unsigned");
         exit(EXIT_FAILURE);
     }
 }
@@ -462,7 +463,7 @@ void tlti(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] < imm)
     {
-        cout << "Trap if less than immediate" << endl;
+        fprintf(outfile, "Trap if less than immediate");
         exit(EXIT_FAILURE);
     }
 }
@@ -471,7 +472,7 @@ void tltiu(int rs, int imm)
     imm = sign_extension(imm);
     if (reg_values[rs] < (unsigned)imm)
     {
-        cout << "Trap if less than immediate" << endl;
+        fprintf(outfile, "Trap if less than immediate");
         exit(EXIT_FAILURE);
     }
 }
@@ -894,7 +895,7 @@ void putData(string mode, string line)
     }
     else
     {
-        cout << "unsupported data type" << endl;
+        fprintf(outfile, "unsupported data type");
     }
 }
 void readData(string filename)
