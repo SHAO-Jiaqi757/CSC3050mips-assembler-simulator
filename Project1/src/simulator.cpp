@@ -81,7 +81,7 @@ void addu(int rs, int rt, int rd)
     // cout << "go to addu" << endl;
 
     // printf("[%d] = [%d]{%d} + [%d]{%d} \n", rd, rs, reg_values[rs], rt, reg_values[rt]);
-    reg_values[rd] = (unsigned)reg_values[rs] + (unsigned)reg_values[rt];
+    reg_values[rd] = reg_values[rs] + reg_values[rt];
     // printf("[%d]=%d \n", rd, reg_values[rd]);
 }
 
@@ -103,7 +103,7 @@ void addi(int rs, int rt, int16_t imm)
 void addiu(int rs, int rt, uint16_t imm)
 {
     imm = sign_extension(imm);
-    reg_values[rt] = (unsigned)reg_values[rs] + (unsigned)imm;
+    reg_values[rt] = reg_values[rs] + imm;
 }
 void and_(int rs, int rt, int rd)
 {
@@ -253,7 +253,7 @@ void sub(int rs, int rt, int rd)
 void subu(int rs, int rt, int rd)
 {
 
-    reg_values[rd] = (u_int32_t)reg_values[rs] - (u_int32_t)reg_values[rt];
+    reg_values[rd] = reg_values[rs] - reg_values[rt];
 }
 void xor_(int rs, int rt, int rd)
 {
@@ -275,7 +275,7 @@ void slt(int rs, int rt, int rd)
 }
 void sltu(int rs, int rt, int rd)
 {
-    reg_values[rd] = (reg_values[rs] < (unsigned)reg_values[rt]) ? 1 : 0;
+    reg_values[rd] = ((unsigned)reg_values[rs] < (unsigned)reg_values[rt]) ? 1 : 0;
 }
 void slti(int rs, int rt, int imm)
 {
@@ -287,7 +287,7 @@ void slti(int rs, int rt, int imm)
 void sltiu(int rs, int rt, int imm)
 {
     imm = sign_extension(imm);
-    reg_values[rt] = (reg_values[rs] < (unsigned)imm) ? 1 : 0;
+    reg_values[rt] = ((unsigned)reg_values[rs] < (unsigned)imm) ? 1 : 0;
 }
 void beq(int rs, int rt, int offset)
 {
@@ -322,7 +322,7 @@ void bgtz(int rs, int offset)
     if (reg_values[rs] > 0)
         pc = pc + target_offset;
 }
-void blez(int rs, int16_t offset)
+void blez(int rs, int offset)
 {
     offset = sign_extension(offset);
     int target_offset = offset << 2;
@@ -486,12 +486,15 @@ void lb(int base, int rt, int offset)
 void lbu(int base, int rt, int offset)
 {
     offset = sign_extension(offset);
-    reg_values[rt] = *(mapMem(reg_values[base] + offset));
+    char tmp = *(mapMem(reg_values[base] + offset));
+    // zero-extend tmp
+    reg_values[rt] = tmp & ((1 << 8)-1 );  // 0b11111111
 }
 void lh(int base, int rt, int offset)
 {
     offset = sign_extension(offset);
-    reg_values[rt] = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
+    int16_t tmp = *reinterpret_cast<int16_t *>(mapMem(reg_values[base] + offset));
+    reg_values[rt] = sign_extension(tmp);
 }
 void lhu(int base, int rt, int offset)
 {
@@ -569,8 +572,10 @@ void ll(int base, int rt, int offset)
 }
 void sb(int base, int rt, int offset)
 {
+    // The least-significant 8-bit byte of GPR rt is stored in memory
+
     offset = sign_extension(offset);
-    *(mapMem(reg_values[base] + offset)) = reg_values[rt];
+    *(mapMem(reg_values[base] + offset)) = reg_values[rt] & ((1 << 8)-1);
 }
 void sh(int base, int rt, int offset)
 {
