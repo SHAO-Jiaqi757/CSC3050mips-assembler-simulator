@@ -1,4 +1,4 @@
-CXX = g++-10
+CXX = g++
 CXXFLAGS = -g
 EXEC = simulator
 OBJS = assembler.o simulator.o # List of object files needed to

@@ -394,7 +394,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(4, regMap[instruction[1]], regMap[instruction[2]], address >> 2);
+                translate_I_type(4, regMap[instruction[1]], regMap[instruction[2]], address);
             }
         }
     }
@@ -419,7 +419,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(1, regMap[instruction[1]], 1, address >> 2);
+                translate_I_type(1, regMap[instruction[1]], 1, address);
             }
         }
     }
@@ -445,7 +445,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(1, regMap[instruction[1]], 0x11, address >> 2);
+                translate_I_type(1, regMap[instruction[1]], 0x11, address);
             }
         }
     }
@@ -470,7 +470,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(7, regMap[instruction[1]], 0, address >> 2);
+                translate_I_type(7, regMap[instruction[1]], 0, address);
             }
         }
     }
@@ -497,7 +497,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(6, regMap[instruction[1]], 0, address >> 2);
+                translate_I_type(6, regMap[instruction[1]], 0, address);
             }
         }
     }
@@ -522,7 +522,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(1, regMap[instruction[1]], 0x10, address >> 2);
+                translate_I_type(1, regMap[instruction[1]], 0x10, address);
             }
         }
     }
@@ -546,7 +546,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(1, regMap[instruction[1]], 0, address >> 2);
+                translate_I_type(1, regMap[instruction[1]], 0, address);
             }
         }
     }
@@ -570,7 +570,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             else
             {
                 str >> dec >> address; // offset
-                translate_I_type(5, regMap[instruction[1]], regMap[instruction[2]], address >> 2);
+                translate_I_type(5, regMap[instruction[1]], regMap[instruction[2]], address);
             }
         }
     }
