@@ -107,13 +107,14 @@ void Assembler::translate_I_type(int op, int rs, int rt, int addr)
 
 void Assembler::translate_J_type(int op, int addr)
 {
+    cout << hex << addr << endl;
     int32_t ans = 0;
     ans = (op << 26);
     ans |= addr;
 
     instruction_machine_code.push_back(ans);
-    // std::string res = std::bitset<32>(ans).to_string();
-    // cout << res << endl;
+    std::string res = std::bitset<32>(ans).to_string();
+    cout << res << endl;
     // instructions[instr_index++] = ans;
 }
 
@@ -385,7 +386,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[3]);
             int address;
             // hex
-            if (instruction[3].find("0x"))
+            if (instruction[3].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(4, regMap[instruction[1]], regMap[instruction[2]], (address - pc_ - 4) >> 2);
@@ -410,7 +411,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(1, regMap[instruction[1]], 1, (address - pc_ - 4) >> 2);
@@ -436,7 +437,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(1, regMap[instruction[1]], 0x11, (address - pc_ - 4) >> 2);
@@ -461,7 +462,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(7, regMap[instruction[1]], 0, (address - pc_ - 4) >> 2);
@@ -488,7 +489,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(6, regMap[instruction[1]], 0, (address - pc_ - 4) >> 2);
@@ -513,7 +514,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(1, regMap[instruction[1]], 0x10, (address - pc_ - 4) >> 2);
@@ -537,7 +538,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[2]);
             int address;
             // hex
-            if (instruction[2].find("0x"))
+            if (instruction[2].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(1, regMap[instruction[1]], 0, (address - pc_ - 4) >> 2);
@@ -561,7 +562,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[3]);
             int address;
             // hex
-            if (instruction[3].find("0x"))
+            if (instruction[3].find("0x")!=string::npos)
             {
                 str >> hex >> address;
                 translate_I_type(5, regMap[instruction[1]], regMap[instruction[2]], (address - pc_ - 4) >> 2);
@@ -576,22 +577,26 @@ void Assembler::translateInstruc(vector<string> instruction)
     }
     else if (instruction[0] == "j")
     {
-        if (is_valid_label(instruction[1]))
+        if (is_valid_label(instruction[1])) {
             translate_J_type(2, labels[instruction[1]] >> 2);
+        }
+            
         else
         {
             stringstream str(instruction[1]);
             int address;
             // hex
-            if (instruction[1].find("0x"))
+            if (instruction[1].find("0x")!=string::npos)
             {
                 str >> hex >> address;
             }
             // dec
             else
             {
+                cout << "dec" << endl;
                 str >> dec >> address;
             }
+            address = address & ((1 << 28) -1);  // mask 4 MSB
             translate_J_type(2, address / 4);
         }
     }
@@ -605,7 +610,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             stringstream str(instruction[1]);
             int address;
             // hex
-            if (instruction[1].find("0x"))
+            if (instruction[1].find("0x")!=string::npos)
             {
                 str >> hex >> address;
             }
@@ -614,6 +619,7 @@ void Assembler::translateInstruc(vector<string> instruction)
             {
                 str >> dec >> address;
             }
+            address = address & ((1 << 28) -1);  // mask 4 MSB
             translate_J_type(3, address / 4);
         }
     }
